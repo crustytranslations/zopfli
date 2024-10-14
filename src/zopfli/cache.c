@@ -23,7 +23,6 @@ Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 #include <stdio.h>
 #include <stdlib.h>
 
-#ifdef ZOPFLI_LONGEST_MATCH_CACHE
 
 void ZopfliInitCache(size_t blocksize, ZopfliLongestMatchCache* lmc) {
   size_t i;
@@ -113,4 +112,3 @@ unsigned ZopfliMaxCachedSublen(const ZopfliLongestMatchCache* lmc,
   return cache[(ZOPFLI_CACHE_LENGTH - 1) * 3] + 3;
 }
 
-#endif  /* ZOPFLI_LONGEST_MATCH_CACHE */

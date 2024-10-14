@@ -26,7 +26,6 @@ The cache that speeds up ZopfliFindLongestMatch of lz77.c.
 
 #include "util.h"
 
-#ifdef ZOPFLI_LONGEST_MATCH_CACHE
 
 /*
 Cache used by ZopfliFindLongestMatch to remember previously found length/dist
@@ -61,6 +60,5 @@ void ZopfliCacheToSublen(const ZopfliLongestMatchCache* lmc,
 unsigned ZopfliMaxCachedSublen(const ZopfliLongestMatchCache* lmc,
                                size_t pos, size_t length);
 
-#endif  /* ZOPFLI_LONGEST_MATCH_CACHE */
 
 #endif  /* ZOPFLI_CACHE_H_ */
