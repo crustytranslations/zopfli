@@ -26,9 +26,6 @@ Functions to compress according to the Zlib specification.
 
 #include "zopfli.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /*
 Compresses according to the zlib specification and append the compressed
@@ -43,8 +40,5 @@ void ZopfliZlibCompress(const ZopfliOptions* options,
                         const unsigned char* in, size_t insize,
                         unsigned char** out, size_t* outsize);
 
-#ifdef __cplusplus
-}  // extern "C"
-#endif
 
 #endif  /* ZOPFLI_ZLIB_H_ */

@@ -28,9 +28,6 @@ Functions to compress according to the DEFLATE specification, using the
 #include "lz77.h"
 #include "zopfli.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /*
 Compresses according to the deflate specification and append the compressed
@@ -85,8 +82,5 @@ Calculates block size in bits, automatically using the best btype.
 double ZopfliCalculateBlockSizeAutoType(const ZopfliLZ77Store* lz77,
                                         size_t lstart, size_t lend);
 
-#ifdef __cplusplus
-}  // extern "C"
-#endif
 
 #endif  /* ZOPFLI_DEFLATE_H_ */

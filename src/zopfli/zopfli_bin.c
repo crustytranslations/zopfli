@@ -34,9 +34,6 @@ decompressor.
 #include "zlib_container.h"
 
 /* Windows workaround for stdout output. */
-#if _WIN32
-#include <fcntl.h>
-#endif
 
 /*
 Loads a file into a memory array. Returns 1 on success, 0 if file doesn't exist
@@ -114,10 +111,6 @@ static void CompressFile(const ZopfliOptions* options,
   if (outfilename) {
     SaveFile(outfilename, out, outsize);
   } else {
-#if _WIN32
-    /* Windows workaround for stdout output. */
-    _setmode(_fileno(stdout), _O_BINARY);
-#endif
     fwrite(out, 1, outsize, stdout);
   }
 
