@@ -1,4 +1,4 @@
-#include "./zopfli/zopfli_slice.h"
+#include "./zopfli_slice.h"
 
 #include <stddef.h>
 #include <stdlib.h>
@@ -3463,4 +3463,78 @@ void ZopfliDeflate(const ZopfliOptions *options, int btype, int final,
             (unsigned long)insize, (unsigned long)(*outsize - offset),
             100.0 * (double)(insize - (*outsize - offset)) / (double)insize);
   }
+}
+
+void single_test(const char *in, int btype, int blocksplitting, int blocksplittingmax)
+{
+  ZopfliOptions options;
+  options.verbose = 0;
+  options.verbose_more = 0;
+  options.numiterations = 15;
+  options.blocksplitting = blocksplitting;
+  options.blocksplittinglast = 0;
+  options.blocksplittingmax = blocksplittingmax;
+
+  options.verbose = 1;
+  options.verbose_more = 1;
+  options.numiterations = 15;
+  options.blocksplitting = 1;
+
+  unsigned char *out = 0;
+  size_t outsize = 0;
+  unsigned char bp = 0;
+  ZopfliDeflate(&options, btype, 1, in, strlen(in), &bp, &out, &outsize);
+  printf("outsize: %d\n", outsize);
+  printf("out: %s\n", out);
+}
+
+int main()
+{
+  const char in1[] = "aaaaaaaa";
+  single_test(in1, 2, 1, 15);
+  single_test(in1, 1, 1, 15);
+  single_test(in1, 0, 1, 15);
+
+  const char in2[] = "aaaaaaaa";
+  single_test(in2, 2, 0, 15);
+  single_test(in2, 1, 0, 15);
+  single_test(in2, 0, 0, 15);
+
+  const char in3[] = "aaaaaaaa";
+  single_test(in3, 2, 1, 10);
+  single_test(in3, 1, 1, 10);
+  single_test(in3, 0, 1, 10);
+
+  const char in4[] = "aaaaaaaa";
+  single_test(in4, 2, 1, 20);
+  single_test(in4, 1, 1, 20);
+  single_test(in4, 0, 1, 20);
+
+  const char in5[] = "\x11\x12\x13\x11\x12\x13\0";
+  single_test(in5, 2, 1, 15);
+  single_test(in5, 1, 1, 15);
+  single_test(in5, 0, 1, 15);
+
+  const char in6[] = "hi! aaa aaa aaa aaa bb bb aaa aaa\0";
+  single_test(in6, 2, 1, 15);
+  single_test(in6, 1, 1, 15);
+  single_test(in6, 0, 1, 15);
+
+  const char in7[] = "hello world aaaaaa aaaaaa aaaaaa aaaaaa bbbb aaaaaa aaaaaa aaaaaa aaaaaa\0";
+  single_test(in7, 2, 1, 15);
+  single_test(in7, 1, 1, 15);
+  single_test(in7, 0, 1, 15);
+
+  const char in8[] = "abngio\x11\x12\x13\x11\x12\x13 ainvin iwbfsnf iwdnfiafioiwbos iqafhiafhaivhadsiovh hfhvo\0";
+  single_test(in8, 2, 1, 15);
+  single_test(in8, 1, 1, 15);
+  single_test(in8, 0, 1, 15);
+
+  const char in9[] = "abngio\x11\x12\x13\x11\x12\x13 ainvin iwbfsnf iwdnfiafioiwbos iqafhiafhaivhadsiovh ainvin iwbfsnf iwdnfiafioiwbos iqafhiafhaivhadsiovh hfhvohfhvohfhvohfhvohfhvohfhvo hfhvohfhvohfhvohfhvohfhvohfhvo\0";
+  single_test(in8, 2, 1, 80);
+  single_test(in8, 1, 1, 80);
+  single_test(in8, 0, 1, 80);
+  single_test(in8, 2, 0, 80);
+  single_test(in8, 1, 0, 80);
+  single_test(in8, 0, 0, 80);
 }
