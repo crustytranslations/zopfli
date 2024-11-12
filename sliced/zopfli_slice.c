@@ -1,4 +1,4 @@
-#include "./zopfli_slice.h"
+#include "zopfli_slice.h"
 
 #include <stddef.h>
 #include <stdlib.h>
@@ -3465,76 +3465,228 @@ void ZopfliDeflate(const ZopfliOptions *options, int btype, int final,
   }
 }
 
+void print_hex_dump(const unsigned char *data, size_t size)
+{
+  printf("Hex dump: ");
+  for (size_t i = 0; i < size && i < 32; i++)
+  { // Limit to first 32 bytes
+    printf("%02x ", data[i]);
+  }
+  if (size > 32)
+    printf("..."); // Indicate truncation
+  printf("\n");
+}
+
+// Helper function to print printable characters
+void print_safe_string(const char *str, size_t len)
+{
+  printf("Content: \"");
+  for (size_t i = 0; i < len && i < 50; i++)
+  { // Limit to first 50 chars
+    if (str[i] >= 32 && str[i] <= 126)
+    { // Printable ASCII
+      printf("%c", str[i]);
+    }
+    else
+    {
+      printf("\\x%02x", (unsigned char)str[i]);
+    }
+  }
+  if (len > 50)
+    printf("..."); // Indicate truncation
+  printf("\"\n");
+}
+
 void single_test(const char *in, int btype, int blocksplitting, int blocksplittingmax)
 {
   ZopfliOptions options;
-  options.verbose = 0;
-  options.verbose_more = 0;
+
+  // Configure options
+  options.verbose = 1;
+  options.verbose_more = 0; // Reduce internal verbose output
   options.numiterations = 15;
   options.blocksplitting = blocksplitting;
   options.blocksplittinglast = 0;
   options.blocksplittingmax = blocksplittingmax;
 
-  options.verbose = 1;
-  options.verbose_more = 1;
-  options.numiterations = 15;
-  options.blocksplitting = 1;
-
   unsigned char *out = 0;
   size_t outsize = 0;
   unsigned char bp = 0;
-  ZopfliDeflate(&options, btype, 1, in, strlen(in), &bp, &out, &outsize);
-  printf("outsize: %d\n", outsize);
-  printf("out: %s\n", out);
+  size_t insize = strlen(in);
+
+  // Print test configuration
+  printf("\n=== Test Configuration ===\n");
+  printf("Block Type: %d (%s)\n", btype,
+         btype == 0 ? "Uncompressed" : btype == 1 ? "Fixed Huffman"
+                                                  : "Dynamic Huffman");
+  printf("Block Splitting: %s\n", blocksplitting ? "Enabled" : "Disabled");
+  printf("Block Splitting Max: %d\n", blocksplittingmax);
+
+  // Print input details
+  printf("\n=== Input ===\n");
+  printf("Size: %zu bytes\n", insize);
+  print_safe_string(in, insize);
+  print_hex_dump((const unsigned char *)in, insize);
+
+  // Perform compression
+  ZopfliDeflate(&options, btype, 1, (const unsigned char *)in, insize, &bp, &out, &outsize);
+
+  // Print compression results
+  printf("\n=== Output ===\n");
+  printf("Compressed Size: %zu bytes\n", outsize);
+  printf("Compression Ratio: %.2f%%\n",
+         100.0 * (1.0 - ((double)outsize / (double)insize)));
+  print_hex_dump(out, outsize);
+
+  printf("\n=== Separator ===\n");
+  printf("----------------------------------------\n");
+
+  free(out);
+}
+
+void run_test_suite()
+{
+  // Test Case 1: Simple repetitive patterns
+  const char test1[] = "aaaaaaaaaa";      // Simple run of same character
+  const char test2[] = "abababababab";    // Alternating pattern
+  const char test3[] = "aaaaabbbbbccccc"; // Runs of different characters
+
+  // Test Case 2: Edge cases for block sizes
+  const char test4[] = "a";     // Single character
+  const char test5[] = "";      // Empty string
+  const char test6[1025] = {0}; // Large block (just over 1024)
+  memset((void *)test6, 'x', 1024);
+
+  // Test Case 3: Special characters and binary data
+  const char test7[] = "Hello\0World";             // Null bytes
+  const char test8[] = "\x00\x01\x02\x03\x04\x05"; // Binary sequence
+  const char test9[] = "\n\r\t\f\v";               // Control characters
+
+  // Test Case 4: Real-world text patterns
+  const char test10[] = "The quick brown fox jumps over the lazy dog";             // English text
+  const char test11[] = "Lorem ipsum dolor sit amet, consectetur adipiscing elit"; // Lorem ipsum
+  const char test12[] = "GET /api/v1/users HTTP/1.1\r\nHost: example.com\r\n\r\n"; // HTTP request
+
+  // Test Case 5: Compressible patterns with varying block splits
+  const char test13[] = "aaaaabbbbbcccccaaaaabbbbbccccc"; // Repeating groups
+  const char test14[] = "abcabcabcabc";                   // Short repeating sequence
+  const char test15[] = "a b c a b c a b c";              // Spaced repeating sequence
+
+  // Test Case 6: Mixed content
+  const char test16[] = "abc123!@#$%^&*()xyz890";                // Alphanumeric with symbols
+  const char test17[] = "UPPER lower 12345 !@#$%";               // Mixed case with numbers
+  const char test18[] = "  spaces   and\ttabs\nand\nnewlines  "; // Whitespace varieties
+
+  // Test Case 7: Random data
+  const char test19[] = "This is a test of the emergency broadcast system. This is only a test.";                                                      // English text
+  const char test20[] = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."; // Lorem ipsum
+
+  // Test Case 8: non-ASCII characters
+  const char test21[] = "¡Hola, mundo!";      // Spanish
+  const char test22[] = "こんにちは、世界！"; // Japanese
+  const char test23[] = "안녕하세요, 세계!";  // Korean
+
+  // Test Case 9: Large block sizes
+  const char test24[1024] = {0}; // Large block (exactly 1024)
+  memset((void *)test24, 'x', 1024);
+
+  // Test different compression settings for each test case
+  for (int i = 1; i <= 24; i++)
+  {
+    const char *current_test;
+    switch (i)
+    {
+    case 1:
+      current_test = test1;
+      break;
+    case 2:
+      current_test = test2;
+      break;
+    case 3:
+      current_test = test3;
+      break;
+    case 4:
+      current_test = test4;
+      break;
+    case 5:
+      current_test = test5;
+      break;
+    case 6:
+      current_test = test6;
+      break;
+    case 7:
+      current_test = test7;
+      break;
+    case 8:
+      current_test = test8;
+      break;
+    case 9:
+      current_test = test9;
+      break;
+    case 10:
+      current_test = test10;
+      break;
+    case 11:
+      current_test = test11;
+      break;
+    case 12:
+      current_test = test12;
+      break;
+    case 13:
+      current_test = test13;
+      break;
+    case 14:
+      current_test = test14;
+      break;
+    case 15:
+      current_test = test15;
+      break;
+    case 16:
+      current_test = test16;
+      break;
+    case 17:
+      current_test = test17;
+      break;
+    case 18:
+      current_test = test18;
+      break;
+    case 19:
+      current_test = test19;
+      break;
+    case 20:
+      current_test = test20;
+      break;
+    case 21:
+      current_test = test21;
+      break;
+    case 22:
+      current_test = test22;
+      break;
+    case 23:
+      current_test = test23;
+      break;
+    case 24:
+      current_test = test24;
+      break;
+    }
+
+    printf("\n=== Testing case %d ===\n", i);
+
+    // Test with different block types
+    single_test(current_test, 2, 1, 15); // Dynamic Huffman
+    single_test(current_test, 1, 1, 15); // Fixed Huffman
+    single_test(current_test, 0, 1, 15); // Uncompressed
+
+    // Test with different block splitting settings
+    single_test(current_test, 2, 0, 15); // No block splitting
+    single_test(current_test, 2, 1, 5);  // Limited splits
+    single_test(current_test, 2, 1, 30); // More splits allowed
+    single_test(current_test, 2, 1, 60); // More splits allowed
+  }
 }
 
 int main()
 {
-  const char in1[] = "aaaaaaaa";
-  single_test(in1, 2, 1, 15);
-  single_test(in1, 1, 1, 15);
-  single_test(in1, 0, 1, 15);
-
-  const char in2[] = "aaaaaaaa";
-  single_test(in2, 2, 0, 15);
-  single_test(in2, 1, 0, 15);
-  single_test(in2, 0, 0, 15);
-
-  const char in3[] = "aaaaaaaa";
-  single_test(in3, 2, 1, 10);
-  single_test(in3, 1, 1, 10);
-  single_test(in3, 0, 1, 10);
-
-  const char in4[] = "aaaaaaaa";
-  single_test(in4, 2, 1, 20);
-  single_test(in4, 1, 1, 20);
-  single_test(in4, 0, 1, 20);
-
-  const char in5[] = "\x11\x12\x13\x11\x12\x13\0";
-  single_test(in5, 2, 1, 15);
-  single_test(in5, 1, 1, 15);
-  single_test(in5, 0, 1, 15);
-
-  const char in6[] = "hi! aaa aaa aaa aaa bb bb aaa aaa\0";
-  single_test(in6, 2, 1, 15);
-  single_test(in6, 1, 1, 15);
-  single_test(in6, 0, 1, 15);
-
-  const char in7[] = "hello world aaaaaa aaaaaa aaaaaa aaaaaa bbbb aaaaaa aaaaaa aaaaaa aaaaaa\0";
-  single_test(in7, 2, 1, 15);
-  single_test(in7, 1, 1, 15);
-  single_test(in7, 0, 1, 15);
-
-  const char in8[] = "abngio\x11\x12\x13\x11\x12\x13 ainvin iwbfsnf iwdnfiafioiwbos iqafhiafhaivhadsiovh hfhvo\0";
-  single_test(in8, 2, 1, 15);
-  single_test(in8, 1, 1, 15);
-  single_test(in8, 0, 1, 15);
-
-  const char in9[] = "abngio\x11\x12\x13\x11\x12\x13 ainvin iwbfsnf iwdnfiafioiwbos iqafhiafhaivhadsiovh ainvin iwbfsnf iwdnfiafioiwbos iqafhiafhaivhadsiovh hfhvohfhvohfhvohfhvohfhvohfhvo hfhvohfhvohfhvohfhvohfhvohfhvo\0";
-  single_test(in8, 2, 1, 80);
-  single_test(in8, 1, 1, 80);
-  single_test(in8, 0, 1, 80);
-  single_test(in8, 2, 0, 80);
-  single_test(in8, 1, 0, 80);
-  single_test(in8, 0, 0, 80);
+  run_test_suite();
+  return 0;
 }
